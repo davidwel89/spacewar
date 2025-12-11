@@ -1,0 +1,89 @@
+/* Reset margin agar full screen */
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Mencegah scrollbar muncul */
+    background-color: black;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+/* Container utama game */
+#gameboard {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    /* Membuat background responsif */
+    background-image: url('img/background.jpg');
+    background-size: cover; 
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* UI / HUD (Skor & Indikator) */
+#ui-layer {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 100; /* Agar selalu di atas objek game */
+    color: aqua;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border-radius: 5px;
+    pointer-events: none; /* Agar mouse tembus ke game */
+}
+
+/* Gaya untuk input data (hanya untuk debug/display) */
+.stat-box {
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+/* Gaya Objek Game */
+.player-ship {
+    position: absolute;
+    width: 60px;
+    height: 50px;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.player-ship img {
+    width: 100%;
+    height: auto;
+}
+
+.bullet {
+    position: absolute;
+    width: 20px;
+    height: 40px; /* Disesuaikan agar lonjong */
+    z-index: 5;
+}
+
+.bullet img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.enemy {
+    position: absolute;
+    width: 80px;
+    height: 90px;
+    z-index: 8;
+}
+
+.enemy img {
+    width: 100%;
+    height: 100%;
+}
+
+.explosion {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    z-index: 20;
+}
