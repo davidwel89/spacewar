@@ -32,10 +32,13 @@ let state = {
 };
 
 // --- AUDIO ---
-const audioShoot = new Audio("audio/bulletsfx.mp3");
-const audioExplode = new Audio("audio/expd.mp3");
-audioShoot.volume = 0.2;
-audioExplode.volume = 0.4;
+let audioShoot, audioExplode;
+try {
+    audioShoot = new Audio("audio/bulletsfx.mp3");
+    audioExplode = new Audio("audio/expd.mp3");
+    audioShoot.volume = 0.2;
+    audioExplode.volume = 0.4;
+} catch (e) { console.warn(e); }
 
 // --- INISIALISASI ---
 window.onload = function () {
@@ -48,9 +51,9 @@ window.onload = function () {
         if(state.player.y > state.height) state.player.y = state.height - 20;
     });
 
-    document.addEventListener("keydown", (e) => {
-        if (e.key === "`" || e.key === "~") toggleDevPanel();
-    });
+    // document.addEventListener("keydown", (e) => {
+    //     if (e.key === "`" || e.key === "~") toggleDevPanel();
+    // });
 };
 
 function startGame() {
@@ -59,10 +62,12 @@ function startGame() {
     document.getElementById("ui-layer").classList.remove("hidden");
     document.getElementById("gameboard").style.cursor = "none";
 
-    audioShoot.play().then(() => {
-        audioShoot.pause();
-        audioShoot.currentTime = 0;
-    }).catch(e => console.log("Audio permission ok"));
+    if(audioShoot) {
+        audioShoot.play().then(() => {
+            audioShoot.pause();
+            audioShoot.currentTime = 0;
+        }).catch(e => console.log("Audio permission ok"));
+    }
 
     document.addEventListener("mousemove", (e) => {
         if(state.isGameOver || !state.isGameStarted) return;
@@ -172,10 +177,10 @@ function updateBossBehavior() {
         boss.y += 2; 
     }
     
+    // POSISI MONCONG (Tempat peluru keluar)
     let bossH = boss.el ? boss.el.offsetHeight : 200;
-    let noseY = boss.y + (bossH * 0.7); 
+    let noseY = boss.y + (bossH * 0.25); 
 
-    // Frekuensi tembak standar
     let fireFreq = Math.max(90, 150 - (boss.bossLevel * 10)); 
     
     if (state.frames % fireFreq === 0) {
@@ -191,7 +196,7 @@ function updateBossBehavior() {
         else if (boss.bossLevel === 2) {
             if (dice < 0.5) shootWingSpread(boss, folder + "1.png", slowSpeed, 1, 1.0);
             else {
-                let randX = boss.x + (Math.random() - 0.5) * 200;
+                let randX = boss.x + (Math.random() - 0.5) * 100;
                 spawnEnemyBullet(randX, noseY, 0, slowSpeed, folder + "2.png");
             }
         }
@@ -199,45 +204,44 @@ function updateBossBehavior() {
         else if (boss.bossLevel === 3) {
             if (dice < 0.6) shootWingSpread(boss, folder + "1.png", slowSpeed, 1, 0.8);
             else {
-                spawnEnemyBullet(boss.x - 100, noseY, -0.5, slowSpeed, folder + "2.png");
-                spawnEnemyBullet(boss.x + 100, noseY, 0.5, slowSpeed, folder + "2.png");
+                // Peluru 3.png juga akan ikut membesar di logic spawnEnemyBullet
+                spawnEnemyBullet(boss.x - 80, noseY, -0.5, slowSpeed, folder + "3.png");
+                spawnEnemyBullet(boss.x + 80, noseY, 0.5, slowSpeed, folder + "3.png");
             }
         }
         // BOSS 4
         else if (boss.bossLevel === 4) {
-            if (dice < 0.75) { // Kurangi peluang laser muncul
+            if (dice < 0.7) {
+                // Skill random (1, 2, 3, 4, 6)
                 let types = ["1.png", "2.png", "3.png", "4.png", "6.png"];
                 let type = types[Math.floor(Math.random() * types.length)];
                 
                 if(type === "1.png") {
                     shootWingSpread(boss, folder + type, slowSpeed, 1, 1.5);
                 } else {
-                    // Tembak skill besar (random spread)
                     spawnEnemyBullet(boss.x, noseY, (Math.random()-0.5), slowSpeed, folder + type);
                 }
             } else {
-                // Laser Charge SANGAT LAMA (180 frame = 3 detik)
+                // Laser
                 shootLaserCharge(boss.x, noseY, folder + "5.png", 3, 180, 40);
             }
         }
         // BOSS 5
         else if (boss.bossLevel === 5) {
-             if (dice < 0.75) { // Kurangi peluang laser
+             if (dice < 0.75) { 
+                // Skill random termasuk 10.png
                 let types = ["1.png", "2.png", "3.png", "5.png", "6.png", "8.png", "9.png", "10.png"];
                 let type = types[Math.floor(Math.random() * types.length)];
                 
                 if(type === "1.png") {
                     shootWingSpread(boss, folder + type, slowSpeed, 1, 2.0);
                 } else {
-                    // Skill Raksasa Renggang
-                    spawnEnemyBullet(boss.x - 150, noseY, -0.5, slowSpeed, folder + type);
-                    spawnEnemyBullet(boss.x + 150, noseY, 0.5, slowSpeed, folder + type);
+                    spawnEnemyBullet(boss.x - 120, noseY, -0.5, slowSpeed, folder + type);
+                    spawnEnemyBullet(boss.x + 120, noseY, 0.5, slowSpeed, folder + type);
                 }
             } else if (dice < 0.9) {
-                // Laser 1: Charge 100 frames
                 shootLaserCharge(boss.x, noseY, folder + "4.png", 3, 100, 40);
             } else {
-                // Laser Ulti: Charge 180 frames (3 detik)
                 shootLaserCharge(boss.x, noseY, folder + "7.png", 3, 180, 80);
             }
         }
@@ -248,8 +252,9 @@ function updateBossBehavior() {
 
 function shootWingSpread(boss, img, speed, countPerWing, spreadFactor) {
     let bossW = boss.el ? boss.el.offsetWidth : 200;
+    let bossH = boss.el ? boss.el.offsetHeight : 200;
     let wingOffset = bossW * 0.3; 
-    let shootY = boss.y + (boss.el.offsetHeight * 0.6); 
+    let shootY = boss.y + (bossH * 0.25); 
 
     shootSpread(boss.x, shootY, img, speed, countPerWing, spreadFactor);
     shootSpread(boss.x - wingOffset, shootY, img, speed, countPerWing, spreadFactor);
@@ -262,7 +267,6 @@ function shootSpread(startX, startY, img, speed, count, spreadFactor) {
         spawnEnemyBullet(startX, startY, drift, speed, img);
         return;
     }
-    
     let startVx = -spreadFactor; 
     let step = (spreadFactor * 2) / (count - 1);
     for (let i = 0; i < count; i++) {
@@ -285,7 +289,7 @@ function updatePlayerMovement() {
 }
 
 function firePlayerBullet() {
-    audioShoot.cloneNode(true).play().catch(()=>{});
+    if(audioShoot) audioShoot.cloneNode(true).play().catch(()=>{});
     const b = document.createElement("div");
     b.className = "bullet";
     b.innerHTML = '<img src="img/bullet.png">';
@@ -317,7 +321,7 @@ function spawnNormalEnemy() {
     state.enemies.push({ type: 'normal', x: xPos, y: -50, hp: 3 + state.level, el: e });
 }
 
-// --- SPAWN PELURU (SIZE UPGRADE & RANDOM VANISH) ---
+// --- SPAWN PELURU  ---
 function spawnEnemyBullet(x, y, vx, vy, imgPath, chargeTime = 0, damage = 10) {
     const b = document.createElement("div");
     b.className = "enemy-bullet";
@@ -325,35 +329,36 @@ function spawnEnemyBullet(x, y, vx, vy, imgPath, chargeTime = 0, damage = 10) {
     let w = 25, h = 25; 
     let isLaser = false;
     let curveRate = 0; 
-    
-    // --- REVISI: TITIK HILANG ACAK (Random Vanish Y) ---
-    // Peluru akan menghilang secara acak antara tengah layar (0.5) sampai bawah layar (1.0)
-    // Ini mengurangi kepadatan peluru di bagian bawah layar secara drastis
     let vanishY = state.height * (0.5 + Math.random() * 0.5);
 
     if (imgPath) {
-        // LASER (Tetap Full Screen)
+        // LASER
         if (imgPath.includes("boss5_bul/7.png") || imgPath.includes("boss5_bul/4.png") || imgPath.includes("boss4_bul/5.png")) {
             w = 50; h = 700; 
             b.classList.add("laser-beam");
             isLaser = true;
-            vanishY = state.height + 800; // Laser tidak boleh vanish di tengah
+            vanishY = state.height + 800; 
         }
-        // PELURU RAKSASA (DIPERBESAR LAGI SESUAI REQUEST)
-        // Boss 4 & 5 Skill (3, 4, 6, 8, 9, 10, dll)
+        // PELURU RAKSASA/LEBAR 
+        
         else if (
-            (imgPath.includes("3.png") || imgPath.includes("4.png") || imgPath.includes("5.png") || imgPath.includes("6.png") || imgPath.includes("8.png") || imgPath.includes("9.png") || imgPath.includes("10.png")) 
+            (imgPath.includes("2.png") || 
+             imgPath.includes("3.png") ||  
+             imgPath.includes("4.png") || 
+             imgPath.includes("5.png") || 
+             imgPath.includes("6.png") || 
+             imgPath.includes("8.png") || 
+             imgPath.includes("9.png") || 
+             imgPath.includes("10.png")) 
             && imgPath.includes("boss")
         ) {
-            w = 250; h = 60; // Lebar 250px!
+            w = 280; h = 60; // Ukuran Besar
         }
-        // Boss 2/5 Peluru Pipih (2.png)
-        else if (imgPath.includes("2.png")) {
-            w = 280; h = 50; // Lebar 280px!
-        }
-        // Peluru 1.png (Kuning)
         else if (imgPath.includes("1.png")) {
             w = 60; h = 60; 
+        }
+        else if (imgPath.includes("boss")) {
+            w = 80; h = 80; 
         }
     }
     
@@ -366,8 +371,14 @@ function spawnEnemyBullet(x, y, vx, vy, imgPath, chargeTime = 0, damage = 10) {
 
     b.style.width = w + "px";
     b.style.height = h + "px";
+    
+    let finalY = y;
+    if (isLaser) {
+        finalY = y + (h / 2) - 20; 
+    }
+
     b.style.left = x + "px";
-    b.style.top = y + "px";
+    b.style.top = finalY + "px";
     
     let charging = false;
     if (chargeTime > 0 && isLaser) {
@@ -380,19 +391,21 @@ function spawnEnemyBullet(x, y, vx, vy, imgPath, chargeTime = 0, damage = 10) {
     document.getElementById("gameboard").appendChild(b);
     
     state.enemyBullets.push({ 
-        x: x, y: y, vx: vx, vy: vy, el: b, 
+        x: x, y: finalY, 
+        vx: vx, vy: vy, el: b, 
         chargeTimer: chargeTime, dmg: damage, w: w, h: h,
         isCharging: charging,
         curveRate: curveRate,
         speedVal: Math.sqrt(vx*vx + vy*vy) || 3,
         life: 600,
-        vanishY: vanishY // Simpan batas vanish unik peluru ini
+        vanishY: vanishY 
     });
 }
 
 function updateEnemies() {
     for (let i = state.enemies.length - 1; i >= 0; i--) {
         let e = state.enemies[i];
+        
         if (e.type === 'normal') {
             e.y += CONFIG.baseEnemySpeed + (state.level * 0.3);
             if (Math.random() < 0.01) {
@@ -404,16 +417,28 @@ function updateEnemies() {
                 const hpBar = e.el.querySelector('.boss-hp-bar');
                 if(hpBar) hpBar.style.width = (e.hp / e.maxHp * 100) + "%";
             }
-            continue; 
         }
-        if (e.y > state.height + 50) {
+
+        if(e.el) { e.el.style.top = e.y + "px"; e.el.style.left = e.x + "px"; }
+
+        let hitW = 50, hitH = 50;
+        if(e.type === 'boss' && e.el) {
+            hitW = e.el.offsetWidth * 0.4;
+            hitH = e.el.offsetHeight * 0.4;
+        }
+
+        if (e.type !== 'boss' && e.y > state.height + 50) {
             removeObj(e.el); state.enemies.splice(i, 1);
-        } else {
-            if(e.el) { e.el.style.top = e.y + "px"; e.el.style.left = e.x + "px"; }
-            if (isColliding(state.player.x, state.player.y, 20, 30, e.x, e.y, 50, 50)) {
-                damagePlayer(30); createExplosion(e.x, e.y);
-                if(e.type !== 'boss') { removeObj(e.el); state.enemies.splice(i, 1); }
+            continue;
+        }
+
+        if (isColliding(state.player.x, state.player.y, 20, 30, e.x, e.y, hitW, hitH)) {
+            if(e.type !== 'boss') { 
+                removeObj(e.el); 
+                state.enemies.splice(i, 1); 
             }
+            damagePlayer(30); 
+            createExplosion(e.x, e.y);
         }
     }
 }
@@ -445,9 +470,6 @@ function updateEnemyBullets() {
         b.x += b.vx;
         b.y += b.vy;
 
-        // --- REVISI: CEK VANISH Y (RANDOM VANISH) ---
-        // Jika peluru sudah melewati batas vanishY miliknya, hapus.
-        // Kecuali LASER (Laser harus full screen).
         let shouldVanish = (!b.el.classList.contains("laser-beam") && b.y > b.vanishY);
 
         if (shouldVanish || b.y > state.height + 100 || b.x < -50 || b.x > state.width + 50 || b.life <= 0) { 
@@ -480,8 +502,10 @@ function updateBullets() {
                 }
                 
                 if (isColliding(b.x, b.y, 10, 20, e.x, e.y, hitW, hitH)) {
+                    removeObj(b.el); 
+                    state.bullets.splice(i, 1);
+                    
                     createExplosion(b.x, b.y - 10); 
-                    removeObj(b.el); state.bullets.splice(i, 1);
                     e.hp -= 20;
                     if (e.hp <= 0) {
                         if (e.type === 'boss') {
@@ -506,17 +530,37 @@ function isColliding(x1, y1, w1, h1, x2, y2, w2, h2) {
 }
 
 function createExplosion(x, y) {
-    audioExplode.cloneNode(true).play().catch(()=>{});
+    if(audioExplode) audioExplode.cloneNode(true).play().catch(()=>{});
+    
+    const gb = document.getElementById("gameboard");
+    if(!gb) return;
+
     const exp = document.createElement("div");
     exp.className = "explosion";
-    exp.innerHTML = '<img src="img/explosion.gif">';
     exp.style.left = x + "px"; exp.style.top = y + "px";
-    document.getElementById("gameboard").appendChild(exp);
-    setTimeout(() => removeObj(exp), 500);
+    
+    const img = document.createElement("img");
+    img.onerror = function() { this.style.display='none'; };
+    img.src = "img/explosion/1.png"; 
+    exp.appendChild(img);
+    gb.appendChild(exp);
+
+    let frame = 1;
+    const maxFrames = 8; 
+
+    const interval = setInterval(() => {
+        frame++;
+        if (frame > maxFrames) {
+            clearInterval(interval);
+            removeObj(exp);
+        } else {
+            img.src = `img/explosion/${frame}.png`;
+        }
+    }, 40); 
 }
 
 function createBossExplosion(x, y) {
-    audioExplode.cloneNode(true).play().catch(()=>{});
+    if(audioExplode) audioExplode.cloneNode(true).play().catch(()=>{});
     const gb = document.getElementById("gameboard");
     const exp = document.createElement("div");
     exp.className = "boss-explosion";
@@ -533,10 +577,16 @@ function createBossExplosion(x, y) {
 }
 
 function updateUI() {
-    document.getElementById("scoreVal").innerText = state.score;
-    document.getElementById("levelVal").innerText = state.level;
+    const sEl = document.getElementById("scoreVal");
+    const lEl = document.getElementById("levelVal");
+    if(sEl) sEl.innerText = state.score;
+    if(lEl) lEl.innerText = state.level;
 }
-function removeObj(el) { if (el && el.parentNode) el.parentNode.removeChild(el); }
+
+function removeObj(el) { 
+    if (el && el.parentNode) el.parentNode.removeChild(el); 
+}
+
 function gameOver() {
     state.isGameOver = true;
     document.getElementById("finalScore").innerText = state.score;
@@ -559,8 +609,10 @@ function devAddScore(amount) { state.score += amount; checkLevelProgress(); upda
 function devToggleGodMode() {
     state.godMode = !state.godMode;
     const status = document.getElementById("godStatus");
-    status.innerText = state.godMode ? "ON" : "OFF";
-    status.style.color = state.godMode ? "red" : "white";
+    if(status) {
+        status.innerText = state.godMode ? "ON" : "OFF";
+        status.style.color = state.godMode ? "red" : "white";
+    }
     if(state.godMode) { state.player.hp = state.player.maxHp; damagePlayer(0); }
 }
 function devKillAll() {
