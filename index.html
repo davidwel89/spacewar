@@ -1,32 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Space Shooter Responsive</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Space War - Responsive & SlowMo</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
     <div id="gameboard">
-        <div id="ui-layer">
-            <div class="stat-box">
-                <span class="stat-label">Mouse X:</span> <span id="dispMX">0</span>
-            </div>
-            <div class="stat-box">
-                <span class="stat-label">Mouse Y:</span> <span id="dispMY">0</span>
-            </div>
-            <div class="stat-box">
-                <span class="stat-label">Bullets:</span> <span id="dispBullets">0</span>
-            </div>
-            <div class="stat-box">
-                <span class="stat-label">Enemies:</span> <span id="dispEnemies">0</span>
-            </div>
+        <div id="start-screen">
+            <h1>SPACE WAR</h1>
+            <p>Misi: Gocek Peluru & Hancurkan Boss!</p>
+            <p class="desktop-hint">(Gerakkan Mouse untuk Mengontrol)</p>
+            <p class="mobile-hint">(Geser Jari untuk Mengontrol)</p>
+            <button onclick="startGame()">START MISSION</button>
         </div>
-        
+
+        <div id="ui-layer" class="hidden">
+            <div class="top-bar">
+                <div class="stat-box">SCORE: <span id="scoreVal">0</span></div>
+                <div class="stat-box">LEVEL: <span id="levelVal">1</span></div>
+            </div>
+
+            <div class="hp-container">
+                <div class="hp-label">HP</div>
+                <div class="hp-bar-bg">
+                    <div id="playerHpBar" class="hp-fill"></div>
+                </div>
+            </div>
+
+            <div id="boss-warning" class="hidden">WARNING: GIANT BOSS!</div>
         </div>
+
+        <div id="dev-panel" class="hidden">
+            <h3>🛠️ DEV MODE</h3>
+            <div class="dev-controls">
+                <button onclick="devAddScore(1000)">+1k Score</button>
+                <button onclick="devAddScore(5000)">+5k Score</button>
+                <button onclick="devToggleGodMode()">God: <span id="godStatus">OFF</span></button>
+                <button onclick="devKillAll()">Kill All</button>
+                <button onclick="devForceBoss()">Spawn Boss</button>
+            </div>
+            <small>Tekan ( ` ) tutup</small>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <h1>MISSION FAILED</h1>
+            <p>Score Akhir: <span id="finalScore">0</span></p>
+            <button onclick="location.reload()">RETRY</button>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
+
 </html>

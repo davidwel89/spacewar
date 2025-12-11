@@ -1,66 +1,226 @@
-/* Reset margin agar full screen */
+/* =========================================
+   1. DASAR & BACKGROUND
+   ========================================= */
 body {
     margin: 0;
-    padding: 0;
-    overflow: hidden; /* Mencegah scrollbar muncul */
-    background-color: black;
-    font-family: 'Courier New', Courier, monospace;
+    overflow: hidden;
+    background-color: #000;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-/* Container utama game */
 #gameboard {
     position: relative;
     width: 100vw;
     height: 100vh;
-    /* Membuat background responsif */
     background-image: url('img/background.jpg');
-    background-size: cover; 
+    background-size: cover;
     background-position: center;
-    background-repeat: no-repeat;
+    cursor: default;
+    overflow: hidden;
 }
 
-/* UI / HUD (Skor & Indikator) */
+/* =========================================
+   2. UI SCREENS
+   ========================================= */
+#start-screen,
+#game-over-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    z-index: 300;
+    text-align: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+h1 {
+    font-size: 8vw;
+    color: cyan;
+    text-shadow: 0 0 20px blue;
+    margin-bottom: 10px;
+    font-weight: 900;
+}
+
+@media (min-width: 600px) {
+    h1 {
+        font-size: 50px;
+    }
+}
+
+#game-over-screen h1 {
+    color: red;
+    text-shadow: 0 0 20px darkred;
+}
+
+button {
+    padding: 10px 30px;
+    font-size: 18px;
+    background: #00ff00;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    border-radius: 5px;
+    margin-top: 20px;
+    box-shadow: 0 0 10px #00ff00;
+    transition: transform 0.1s;
+}
+
+button:hover {
+    transform: scale(1.1);
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* =========================================
+   3. HUD
+   ========================================= */
 #ui-layer {
     position: absolute;
     top: 10px;
     left: 10px;
-    z-index: 100; /* Agar selalu di atas objek game */
-    color: aqua;
-    background-color: rgba(0, 0, 0, 0.5);
-    padding: 10px;
-    border-radius: 5px;
-    pointer-events: none; /* Agar mouse tembus ke game */
+    width: 100%;
+    z-index: 100;
+    pointer-events: none;
 }
 
-/* Gaya untuk input data (hanya untuk debug/display) */
-.stat-box {
+.top-bar {
+    display: flex;
+    gap: 15px;
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 2px 2px 0 #000;
     margin-bottom: 5px;
 }
 
-.stat-label {
-    font-weight: bold;
-    margin-right: 5px;
+.hp-container {
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
-/* Gaya Objek Game */
+.hp-label {
+    color: cyan;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.hp-bar-bg {
+    width: 150px;
+    height: 10px;
+    background-color: rgba(0, 0, 0, 0.6);
+    border: 1px solid #fff;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.hp-fill {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #00ff00, #00cc00);
+    transition: width 0.2s;
+}
+
+#boss-warning {
+    position: absolute;
+    top: 35%;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 30px;
+    color: red;
+    font-weight: 900;
+    letter-spacing: 5px;
+    animation: blink 0.5s infinite;
+}
+
+@keyframes blink {
+    50% {
+        opacity: 0;
+    }
+}
+
+/* =========================================
+   4. OBJEK GAME
+   ========================================= */
 .player-ship {
     position: absolute;
-    width: 60px;
-    height: 50px;
+    width: 50px;
+    height: 60px;
     z-index: 10;
-    pointer-events: none;
+    transform: translate(-50%, -50%);
 }
 
 .player-ship img {
     width: 100%;
-    height: auto;
+    height: 100%;
+    object-fit: contain;
 }
 
+.enemy {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    z-index: 8;
+    transform: translate(-50%, -50%);
+}
+
+.enemy img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* BOSS RESPONSIVE */
+.boss {
+    position: absolute;
+    width: 80vw;
+    max-width: 400px;
+    height: 80vw;
+    max-height: 400px;
+    z-index: 9;
+    display: flex;
+    justify-content: center;
+    transform: translate(-50%, -50%);
+}
+
+.boss img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.boss-hp-bar {
+    position: absolute;
+    top: 10%;
+    left: 10%;
+    width: 80%;
+    height: 8px;
+    background: red;
+    border: 1px solid white;
+    z-index: 15;
+}
+
+/* PELURU PEMAIN */
 .bullet {
     position: absolute;
-    width: 20px;
-    height: 40px; /* Disesuaikan agar lonjong */
+    width: 8px;
+    height: 16px;
     z-index: 5;
+    transform: translate(-50%, -50%);
 }
 
 .bullet img {
@@ -69,21 +229,130 @@ body {
     object-fit: contain;
 }
 
-.enemy {
+/* PELURU MUSUH */
+.enemy-bullet {
     position: absolute;
-    width: 80px;
-    height: 90px;
-    z-index: 8;
+    z-index: 6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transform: translate(-50%, -50%);
+    /* Rotasi halus untuk peluru melengkung */
+    transition: transform 0.1s linear;
 }
 
-.enemy img {
+.enemy-bullet img {
     width: 100%;
     height: 100%;
+    object-fit: contain;
 }
 
+/* LASER BEAM STYLE */
+.laser-beam {
+    border-radius: 5px;
+    box-shadow: 0 0 20px red, 0 0 40px orange;
+    z-index: 5;
+    transition: opacity 0.2s, box-shadow 0.2s;
+}
+
+.laser-beam img {
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+}
+
+/* EFEK CHARGE (WARNING PATH) */
+.laser-charge {
+    opacity: 0.4 !important;
+    box-shadow: 0 0 5px red !important;
+    filter: grayscale(100%) sepia(100%) hue-rotate(0deg) saturate(500%);
+    animation: warningBlink 0.1s infinite;
+    transform: translate(-50%, -50%) scaleX(0.5) !important;
+}
+
+@keyframes warningBlink {
+    0% {
+        opacity: 0.3;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+
+    100% {
+        opacity: 0.3;
+    }
+}
+
+/* LEDAKAN */
 .explosion {
     position: absolute;
-    width: 120px;
-    height: 120px;
+    width: 60px;
+    height: 60px;
     z-index: 20;
+    transform: translate(-50%, -50%);
+}
+
+.explosion img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.boss-explosion {
+    position: absolute;
+    width: 90vw;
+    height: 90vw;
+    max-width: 500px;
+    max-height: 500px;
+    z-index: 25;
+    transform: translate(-50%, -50%);
+}
+
+.boss-explosion img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* =========================================
+   5. DEV PANEL
+   ========================================= */
+#dev-panel {
+    position: absolute;
+    top: 40px;
+    right: 10px;
+    width: 140px;
+    background-color: rgba(0, 0, 0, 0.8);
+    border: 1px solid #00ff00;
+    color: #00ff00;
+    padding: 5px;
+    border-radius: 5px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+#dev-panel h3 {
+    font-size: 10px;
+    margin: 0;
+    text-align: center;
+    border-bottom: 1px solid #00ff00;
+}
+
+#dev-panel button {
+    background: #003300;
+    color: #00ff00;
+    border: 1px solid #00ff00;
+    padding: 3px;
+    font-size: 9px;
+    margin-top: 2px;
+    cursor: pointer;
+}
+
+#dev-panel small {
+    text-align: center;
+    color: #aaa;
+    font-size: 8px;
 }
