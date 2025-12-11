@@ -1,2 +1,0 @@
-# spacewar
-Game web sederhana
