@@ -10,6 +10,16 @@ const CONFIG = {
     levelThresholds: [1000, 3000, 6000, 10000, 15000] 
 };
 
+// --- DATA LIST LAGU (BGM) ---
+const BGM_LIST = [
+    { file: "soundtrack/(1)Arthur Vyncke - A Few Jumps Away.mp3", credit: "A Few Jumps Away - Arthur Vyncke" },
+    { file: "soundtrack/(2)Miguel Johnson - Good Day To Die.mp3", credit: "Good Day To Die - Miguel Johnson" },
+    { file: "soundtrack/(3)Keys Of Moon - Thunder Unison.mp3", credit: "Thunder Unison - Keys Of Moon" },
+    { file: "soundtrack/(4)A Himitsu - Two Places.mp3", credit: "Two Places - A Himitsu" },
+    { file: "soundtrack/(5)Makai Symphony - Endless Storm.mp3", credit: "Endless Storm - Makai Symphony" },
+    { file: "soundtrack/(6)Makai Symphony - The Army of Minotaur.mp3", credit: "The Army of Minotaur - Makai Symphony" }
+];
+
 // --- STATE ---
 let state = {
     width: window.innerWidth,
@@ -28,17 +38,78 @@ let state = {
     bossActive: false,
     bossObj: null,
     godMode: false,
-    devPanelOpen: false
+    devPanelOpen: false,
+    currentTrackIndex: -1,
+    isMusicMuted: false
 };
 
-// --- AUDIO ---
-let audioShoot, audioExplode;
+// --- AUDIO SETUP ---
+let audioShoot, audioExplode, bgmPlayer;
+
+// Volume Master Config
+const VOL_SFX = 0.05; // 10% (Sangat Kecil)
+const VOL_BGM = 1.0; // 100% (Full)
+
 try {
     audioShoot = new Audio("audio/bulletsfx.mp3");
     audioExplode = new Audio("audio/expd.mp3");
-    audioShoot.volume = 0.2;
-    audioExplode.volume = 0.4;
-} catch (e) { console.warn(e); }
+    
+    // Set volume master source (walaupun nanti di-clone, ini jaga-jaga)
+    audioShoot.volume = VOL_SFX;   
+    audioExplode.volume = VOL_SFX; 
+
+    bgmPlayer = new Audio();
+    bgmPlayer.loop = true; 
+    bgmPlayer.volume = VOL_BGM;
+    
+    bgmPlayer.addEventListener('error', function(e) {
+        console.error("Error loading audio file:", bgmPlayer.src);
+    });
+
+} catch (e) { console.warn("Audio init error:", e); }
+
+// --- FUNGSI MUSIK ---
+function playBGM(index) {
+    if (state.isMusicMuted) return;
+    if (index < 0 || index >= BGM_LIST.length) return;
+    
+    if (state.currentTrackIndex === index && !bgmPlayer.paused) return;
+
+    state.currentTrackIndex = index;
+    const track = BGM_LIST[index];
+
+    bgmPlayer.src = track.file;
+    bgmPlayer.volume = VOL_BGM; // Pastikan volume BGM selalu 100%
+    
+    let playPromise = bgmPlayer.play();
+    if (playPromise !== undefined) {
+        playPromise.then(() => {}).catch(error => {
+            console.log("Autoplay prevented.");
+        });
+    }
+
+    const creditEl = document.getElementById("bgmTitle");
+    if (creditEl) creditEl.innerText = track.credit;
+}
+
+function toggleMusic() {
+    const btn = document.getElementById("musicBtn");
+    if (state.isMusicMuted) {
+        state.isMusicMuted = false;
+        bgmPlayer.volume = VOL_BGM;
+        btn.innerText = "🔊 MUSIC: ON";
+        btn.style.color = "lime";
+        btn.style.borderColor = "lime";
+        if(state.currentTrackIndex !== -1) bgmPlayer.play();
+        else playBGM(0);
+    } else {
+        state.isMusicMuted = true;
+        bgmPlayer.pause();
+        btn.innerText = "🔇 MUSIC: OFF";
+        btn.style.color = "red";
+        btn.style.borderColor = "red";
+    }
+}
 
 // --- INISIALISASI ---
 window.onload = function () {
@@ -51,9 +122,9 @@ window.onload = function () {
         if(state.player.y > state.height) state.player.y = state.height - 20;
     });
 
-    /* document.addEventListener("keydown", (e) => {
-         if (e.key === "`" || e.key === "~") toggleDevPanel();
-     }); */
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "`" || e.key === "~") toggleDevPanel();
+    });
 };
 
 function startGame() {
@@ -62,11 +133,20 @@ function startGame() {
     document.getElementById("ui-layer").classList.remove("hidden");
     document.getElementById("gameboard").style.cursor = "none";
 
-    if(audioShoot) {
+    // Pancing BGM
+    if (bgmPlayer) {
+        bgmPlayer.volume = VOL_BGM;
+        playBGM(0);
+    }
+
+    // Pancing SFX (Muted play)
+    if (audioShoot) {
+        audioShoot.volume = 0; // Silent pancingan
         audioShoot.play().then(() => {
             audioShoot.pause();
             audioShoot.currentTime = 0;
-        }).catch(e => console.log("Audio permission ok"));
+            audioShoot.volume = VOL_SFX; // Kembalikan ke 10%
+        }).catch(e => {});
     }
 
     document.addEventListener("mousemove", (e) => {
@@ -137,6 +217,11 @@ function checkLevelProgress() {
 function spawnBoss(lvl) {
     state.bossActive = true;
     showBossWarning();
+    
+    if (lvl <= 5) {
+        playBGM(lvl); 
+    }
+
     const bossHP = 2000 + (lvl * 1500); 
     const gb = document.getElementById("gameboard");
     const e = document.createElement("div");
@@ -177,7 +262,6 @@ function updateBossBehavior() {
         boss.y += 2; 
     }
     
-    // POSISI MONCONG (Tempat peluru keluar)
     let bossH = boss.el ? boss.el.offsetHeight : 200;
     let noseY = boss.y + (bossH * 0.25); 
 
@@ -204,15 +288,13 @@ function updateBossBehavior() {
         else if (boss.bossLevel === 3) {
             if (dice < 0.6) shootWingSpread(boss, folder + "1.png", slowSpeed, 1, 0.8);
             else {
-                // Peluru 3.png juga akan ikut membesar di logic spawnEnemyBullet
-                spawnEnemyBullet(boss.x - 80, noseY, -0.5, slowSpeed, folder + "3.png");
-                spawnEnemyBullet(boss.x + 80, noseY, 0.5, slowSpeed, folder + "3.png");
+                spawnEnemyBullet(boss.x - 80, noseY, -0.5, slowSpeed, folder + "2.png"); // Menggunakan 2.png
+                spawnEnemyBullet(boss.x + 80, noseY, 0.5, slowSpeed, folder + "2.png");  // Menggunakan 2.png
             }
         }
         // BOSS 4
         else if (boss.bossLevel === 4) {
             if (dice < 0.7) {
-                // Skill random (1, 2, 3, 4, 6)
                 let types = ["1.png", "2.png", "3.png", "4.png", "6.png"];
                 let type = types[Math.floor(Math.random() * types.length)];
                 
@@ -222,22 +304,20 @@ function updateBossBehavior() {
                     spawnEnemyBullet(boss.x, noseY, (Math.random()-0.5), slowSpeed, folder + type);
                 }
             } else {
-                // Laser
                 shootLaserCharge(boss.x, noseY, folder + "5.png", 3, 180, 40);
             }
         }
         // BOSS 5
         else if (boss.bossLevel === 5) {
              if (dice < 0.75) { 
-                // Skill random termasuk 10.png
                 let types = ["1.png", "2.png", "3.png", "5.png", "6.png", "8.png", "9.png", "10.png"];
                 let type = types[Math.floor(Math.random() * types.length)];
                 
                 if(type === "1.png") {
                     shootWingSpread(boss, folder + type, slowSpeed, 1, 2.0);
                 } else {
-                    spawnEnemyBullet(boss.x - 120, noseY, -0.5, slowSpeed, folder + type);
-                    spawnEnemyBullet(boss.x + 120, noseY, 0.5, slowSpeed, folder + type);
+                    spawnEnemyBullet(boss.x - 100, noseY, -0.5, slowSpeed, folder + type);
+                    spawnEnemyBullet(boss.x + 100, noseY, 0.5, slowSpeed, folder + type);
                 }
             } else if (dice < 0.9) {
                 shootLaserCharge(boss.x, noseY, folder + "4.png", 3, 100, 40);
@@ -253,7 +333,7 @@ function updateBossBehavior() {
 function shootWingSpread(boss, img, speed, countPerWing, spreadFactor) {
     let bossW = boss.el ? boss.el.offsetWidth : 200;
     let bossH = boss.el ? boss.el.offsetHeight : 200;
-    let wingOffset = bossW * 0.3; 
+    let wingOffset = bossW * 0.25; 
     let shootY = boss.y + (bossH * 0.25); 
 
     shootSpread(boss.x, shootY, img, speed, countPerWing, spreadFactor);
@@ -267,6 +347,7 @@ function shootSpread(startX, startY, img, speed, count, spreadFactor) {
         spawnEnemyBullet(startX, startY, drift, speed, img);
         return;
     }
+    
     let startVx = -spreadFactor; 
     let step = (spreadFactor * 2) / (count - 1);
     for (let i = 0; i < count; i++) {
@@ -289,7 +370,12 @@ function updatePlayerMovement() {
 }
 
 function firePlayerBullet() {
-    if(audioShoot) audioShoot.cloneNode(true).play().catch(()=>{});
+    if(audioShoot) {
+        // --- FIX VOLUME UTAMA: FORCE SET VOLUME PADA CLONE ---
+        const sfx = audioShoot.cloneNode(true);
+        sfx.volume = VOL_SFX; // Paksa volume 10%
+        sfx.play().catch(()=>{});
+    }
     const b = document.createElement("div");
     b.className = "bullet";
     b.innerHTML = '<img src="img/bullet.png">';
@@ -321,7 +407,6 @@ function spawnNormalEnemy() {
     state.enemies.push({ type: 'normal', x: xPos, y: -50, hp: 3 + state.level, el: e });
 }
 
-// --- SPAWN PELURU  ---
 function spawnEnemyBullet(x, y, vx, vy, imgPath, chargeTime = 0, damage = 10) {
     const b = document.createElement("div");
     b.className = "enemy-bullet";
@@ -332,15 +417,12 @@ function spawnEnemyBullet(x, y, vx, vy, imgPath, chargeTime = 0, damage = 10) {
     let vanishY = state.height * (0.5 + Math.random() * 0.5);
 
     if (imgPath) {
-        // LASER
         if (imgPath.includes("boss5_bul/7.png") || imgPath.includes("boss5_bul/4.png") || imgPath.includes("boss4_bul/5.png")) {
             w = 50; h = 700; 
             b.classList.add("laser-beam");
             isLaser = true;
             vanishY = state.height + 800; 
         }
-        // PELURU RAKSASA/LEBAR 
-        
         else if (
             (imgPath.includes("2.png") || 
              imgPath.includes("3.png") ||  
@@ -352,7 +434,7 @@ function spawnEnemyBullet(x, y, vx, vy, imgPath, chargeTime = 0, damage = 10) {
              imgPath.includes("10.png")) 
             && imgPath.includes("boss")
         ) {
-            w = 280; h = 60; // Ukuran Besar
+            w = 280; h = 60; 
         }
         else if (imgPath.includes("1.png")) {
             w = 60; h = 60; 
@@ -511,6 +593,7 @@ function updateBullets() {
                         if (e.type === 'boss') {
                             createBossExplosion(e.x, e.y);
                             state.score += CONFIG.pointsBoss; state.bossActive = false; state.bossObj = null; state.level++;
+                            playBGM(0);
                             state.player.hp = Math.min(state.player.maxHp, state.player.hp + 50); damagePlayer(0);
                         } else {
                             createExplosion(e.x, e.y);
@@ -530,7 +613,12 @@ function isColliding(x1, y1, w1, h1, x2, y2, w2, h2) {
 }
 
 function createExplosion(x, y) {
-    if(audioExplode) audioExplode.cloneNode(true).play().catch(()=>{});
+    if(audioExplode) {
+        // --- FIX VOLUME LEDAKAN ---
+        const sfx = audioExplode.cloneNode(true);
+        sfx.volume = VOL_SFX; // Paksa volume 10%
+        sfx.play().catch(()=>{});
+    }
     
     const gb = document.getElementById("gameboard");
     if(!gb) return;
@@ -560,7 +648,11 @@ function createExplosion(x, y) {
 }
 
 function createBossExplosion(x, y) {
-    if(audioExplode) audioExplode.cloneNode(true).play().catch(()=>{});
+    if(audioExplode) {
+        const sfx = audioExplode.cloneNode(true);
+        sfx.volume = VOL_SFX;
+        sfx.play().catch(()=>{});
+    }
     const gb = document.getElementById("gameboard");
     const exp = document.createElement("div");
     exp.className = "boss-explosion";
@@ -589,6 +681,7 @@ function removeObj(el) {
 
 function gameOver() {
     state.isGameOver = true;
+    bgmPlayer.pause();
     document.getElementById("finalScore").innerText = state.score;
     document.getElementById("game-over-screen").classList.remove("hidden");
     document.getElementById("gameboard").style.cursor = "default";

@@ -316,6 +316,46 @@ button:hover {
 }
 
 /* =========================================
+   UI TAMBAHAN (MUSIK)
+   ========================================= */
+#music-credit {
+    position: absolute;
+    bottom: 10px;
+    right: 15px;
+    font-size: 10px;
+    /* Ukuran kecil */
+    color: rgba(255, 255, 255, 0.6);
+    /* Agak transparan agar tidak mengganggu */
+    font-family: 'Courier New', Courier, monospace;
+    z-index: 100;
+    text-align: right;
+    pointer-events: none;
+    text-shadow: 1px 1px 2px black;
+}
+
+/* TAMBAHAN UNTUK TOMBOL MUSIK */
+#musicBtn {
+    pointer-events: auto;
+    /* Agar bisa diklik */
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid lime;
+    color: lime;
+    padding: 5px 10px;
+    font-size: 12px;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 200;
+    margin-top: 0;
+    /* Override margin button umum */
+}
+
+#musicBtn:hover {
+    background: lime;
+    color: black;
+}
+
+/* =========================================
    5. DEV PANEL
    ========================================= 
 #dev-panel {
