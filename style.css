@@ -136,7 +136,7 @@ button:hover {
 
 #boss-warning {
     position: absolute;
-    top: 35%;
+    top: 60%;
     left: 0;
     width: 100%;
     text-align: center;
@@ -206,7 +206,7 @@ button:hover {
 .boss-hp-bar {
     position: absolute;
     top: 10%;
-    left: 10%;
+    left: 0%;
     width: 80%;
     height: 8px;
     background: red;
@@ -356,8 +356,78 @@ button:hover {
 }
 
 /* =========================================
+   UPDATE: ANIMASI PELURU (SPRITESHEET)
+   ========================================= */
+
+/* Class Dasar untuk Peluru Sprite */
+.bullet-sprite {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    z-index: 6;
+}
+
+/* --- DEFINISI ANIMASI (Keyframes) --- */
+@keyframes playSprite {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: 100% 0;
+    }
+}
+
+/* --- TIPE 1: Peluru Oranye Lebar (2.png) --- */
+/* Estimasi: 7 Frame */
+.sprite-type-2 {
+    width: 80px;
+    /* Lebar 1 frame */
+    height: 80px;
+    /* Tinggi 1 frame */
+    background-size: 700% 100%;
+    /* Total lebar gambar = 700% dari lebar container */
+    animation: playSprite 0.5s steps(7) infinite;
+    /* Loop 7 frame */
+}
+
+/* --- TIPE 2: Peluru Hijau Sabit (3.png & 10.png) --- */
+/* Estimasi: 6 Frame */
+.sprite-type-3 {
+    width: 60px;
+    height: 60px;
+    background-size: 600% 100%;
+    animation: playSprite 0.4s steps(6) infinite;
+}
+
+/* --- TIPE 3: Peluru Pink/Merah Panjang (4.png) --- */
+/* Estimasi: 12 Frame (Kelihatan panjang) */
+.sprite-type-4 {
+    width: 40px;
+    height: 40px;
+    background-size: 1200% 100%;
+    animation: playSprite 0.8s steps(12) infinite;
+}
+
+/* --- TIPE LAIN: Peluru Bulat Putih/Hijau (9.png / 6.png) --- */
+.sprite-type-circle {
+    width: 50px;
+    height: 50px;
+    background-size: 800% 100%;
+    /* Asumsi 8 frame */
+    animation: playSprite 0.6s steps(8) infinite;
+}
+
+/* Override ukuran visual jika perlu dibesarkan lewat JS */
+.scale-up {
+    transform: translate(-50%, -50%) scale(1.5);
+    /* Perbesar 1.5x */
+}
+
+/* =========================================
    5. DEV PANEL
-   ========================================= 
+   ========================================= */
 #dev-panel {
     position: absolute;
     top: 40px;
@@ -395,4 +465,4 @@ button:hover {
     text-align: center;
     color: #aaa;
     font-size: 8px;
-} */
+}

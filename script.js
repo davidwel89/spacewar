@@ -10,6 +10,28 @@ const CONFIG = {
     levelThresholds: [1000, 3000, 6000, 10000, 15000] 
 };
 
+// --- DATABASE PELURU ---
+// w/h = Ukuran Visual (Gambar)
+// hitW/hitH = Ukuran Hitbox (Area Tabrakan) -> Lebih kecil agar adil
+const BULLET_DATA = {
+    'bul1': { f: 4, w: 30, h: 60, hitW: 15, hitH: 40 },
+    
+    // REVISI: Visual Besar (180), Hitbox Kecil (50) -> Anti Peluru Ghoib
+    'bul2': { f: 6, w: 180, h: 90, hitW: 50, hitH: 30 },  
+    
+    'bul3': { f: 6, w: 30, h: 80, hitW: 20, hitH: 60, isMissile: true }, 
+    'bul4': { f: 8, w: 50, h: 50, hitW: 30, hitH: 30 },
+    
+    // REVISI: Visual Besar (180), Hitbox Kecil (50)
+    'bul5': { f: 6, w: 180, h: 90, hitW: 50, hitH: 30 },  
+    
+    'bul6': { f: 16, w: 50, h: 50, hitW: 30, hitH: 30 },
+    'bul7': { f: 4, w: 50, h: 800, hitW: 30, hitH: 800, isLaser: true }, 
+    'bul8': { f: 8, w: 40, h: 40, hitW: 25, hitH: 25 },
+    'bul9': { f: 3, w: 35, h: 60, hitW: 20, hitH: 40, isMissile: true }, 
+    'bul10': { f: 6, w: 60, h: 800, hitW: 40, hitH: 800, isLaser: true } 
+};
+
 // --- DATA LIST LAGU (BGM) ---
 const BGM_LIST = [
     { file: "soundtrack/(1)Arthur Vyncke - A Few Jumps Away.mp3", credit: "A Few Jumps Away - Arthur Vyncke" },
@@ -40,54 +62,48 @@ let state = {
     godMode: false,
     devPanelOpen: false,
     currentTrackIndex: -1,
-    isMusicMuted: false
+    isMusicMuted: false,
+    waveTimer: 0
 };
 
 // --- AUDIO SETUP ---
 let audioShoot, audioExplode, bgmPlayer;
-
-// Volume Master Config
-const VOL_SFX = 0.05; // 10% (Sangat Kecil)
-const VOL_BGM = 1.0; // 100% (Full)
+const VOL_SFX = 0.05; 
+const VOL_BGM = 1.0; 
 
 try {
     audioShoot = new Audio("audio/bulletsfx.mp3");
     audioExplode = new Audio("audio/expd.mp3");
-    
-    // Set volume master source (walaupun nanti di-clone, ini jaga-jaga)
     audioShoot.volume = VOL_SFX;   
     audioExplode.volume = VOL_SFX; 
 
     bgmPlayer = new Audio();
     bgmPlayer.loop = true; 
     bgmPlayer.volume = VOL_BGM;
-    
-    bgmPlayer.addEventListener('error', function(e) {
-        console.error("Error loading audio file:", bgmPlayer.src);
-    });
+    bgmPlayer.addEventListener('error', (e) => console.log("Audio Error:", e));
+} catch (e) { console.warn(e); }
 
-} catch (e) { console.warn("Audio init error:", e); }
+// --- HELPER: Padding Angka ---
+function pad(num, size) {
+    var s = "000" + num;
+    return s.substr(s.length-size);
+}
 
 // --- FUNGSI MUSIK ---
 function playBGM(index) {
     if (state.isMusicMuted) return;
     if (index < 0 || index >= BGM_LIST.length) return;
-    
     if (state.currentTrackIndex === index && !bgmPlayer.paused) return;
 
     state.currentTrackIndex = index;
     const track = BGM_LIST[index];
-
     bgmPlayer.src = track.file;
-    bgmPlayer.volume = VOL_BGM; // Pastikan volume BGM selalu 100%
+    bgmPlayer.volume = VOL_BGM; 
     
     let playPromise = bgmPlayer.play();
     if (playPromise !== undefined) {
-        playPromise.then(() => {}).catch(error => {
-            console.log("Autoplay prevented.");
-        });
+        playPromise.then(() => {}).catch(error => console.log("Autoplay prevented."));
     }
-
     const creditEl = document.getElementById("bgmTitle");
     if (creditEl) creditEl.innerText = track.credit;
 }
@@ -114,38 +130,29 @@ function toggleMusic() {
 // --- INISIALISASI ---
 window.onload = function () {
     createPlayer();
-    
     window.addEventListener("resize", () => {
         state.width = window.innerWidth;
         state.height = window.innerHeight;
         if(state.player.x > state.width) state.player.x = state.width - 20;
         if(state.player.y > state.height) state.player.y = state.height - 20;
     });
-
     document.addEventListener("keydown", (e) => {
         if (e.key === "`" || e.key === "~") toggleDevPanel();
     });
 };
 
 function startGame() {
+    console.log("Game Started..."); 
     state.isGameStarted = true;
     document.getElementById("start-screen").classList.add("hidden");
     document.getElementById("ui-layer").classList.remove("hidden");
     document.getElementById("gameboard").style.cursor = "none";
 
-    // Pancing BGM
-    if (bgmPlayer) {
-        bgmPlayer.volume = VOL_BGM;
-        playBGM(0);
-    }
-
-    // Pancing SFX (Muted play)
+    if (bgmPlayer) { bgmPlayer.volume = VOL_BGM; playBGM(0); }
     if (audioShoot) {
-        audioShoot.volume = 0; // Silent pancingan
+        audioShoot.volume = 0; 
         audioShoot.play().then(() => {
-            audioShoot.pause();
-            audioShoot.currentTime = 0;
-            audioShoot.volume = VOL_SFX; // Kembalikan ke 10%
+            audioShoot.pause(); audioShoot.currentTime = 0; audioShoot.volume = VOL_SFX;
         }).catch(e => {});
     }
 
@@ -154,7 +161,6 @@ function startGame() {
         state.mouseX = e.clientX;
         state.mouseY = e.clientY;
     });
-
     document.addEventListener("touchmove", (e) => {
         if(state.isGameOver || !state.isGameStarted) return;
         e.preventDefault(); 
@@ -179,31 +185,28 @@ function createPlayer() {
 function gameLoop() {
     if (state.isGameStarted && !state.isGameOver) {
         state.frames++;
-
-        updatePlayerMovement();
         
-        if (state.frames % CONFIG.playerFireRate === 0) {
-            firePlayerBullet();
+        try {
+            updatePlayerMovement();
+            if (state.frames % CONFIG.playerFireRate === 0) firePlayerBullet();
+            
+            updateBullets();
+            updateEnemyBullets();
+            checkLevelProgress();
+
+            if (!state.bossActive) {
+                handleWaveSystem();
+            } else {
+                updateBossBehavior();
+            }
+            
+            updateEnemies();
+            updateUI();
+        } catch (err) {
+            console.error("Loop Error:", err);
         }
-
-        updateBullets();
-        updateEnemyBullets();
-        checkLevelProgress();
-
-        if (!state.bossActive) {
-            let spawnRate = Math.max(20, 80 - (state.level * 10)); 
-            if (state.frames % spawnRate === 0) spawnNormalEnemy();
-        } else {
-            updateBossBehavior();
-        }
-
-        updateEnemies();
-        updateUI();
     }
-    
-    if (!state.isGameOver) {
-        requestAnimationFrame(gameLoop);
-    }
+    if (!state.isGameOver) requestAnimationFrame(gameLoop);
 }
 
 function checkLevelProgress() {
@@ -214,30 +217,86 @@ function checkLevelProgress() {
     }
 }
 
+// --- WAVE SYSTEM ---
+function handleWaveSystem() {
+    state.waveTimer++;
+    if (state.waveTimer % 100 === 0) {
+        let pattern = Math.floor(Math.random() * 4);
+        if (pattern === 0) spawnFormationV();
+        else if (pattern === 1) spawnFormationLine();
+        else if (pattern === 2) spawnFormationZigZag();
+        else spawnFormationSlant();
+    }
+}
+
+function spawnFormationV() {
+    let centerX = Math.random() * (state.width - 200) + 100;
+    for (let i = 0; i < 5; i++) {
+        let offsetX = (i - 2) * 60; 
+        let offsetY = Math.abs(i - 2) * 50; 
+        spawnEnemy(centerX + offsetX, -50 - offsetY, 'straight');
+    }
+}
+
+function spawnFormationLine() {
+    let startX = Math.random() * (state.width - 400) + 50;
+    for (let i = 0; i < 4; i++) {
+        spawnEnemy(startX + (i * 80), -50, 'straight');
+    }
+}
+
+function spawnFormationZigZag() {
+    for (let i = 0; i < 3; i++) {
+        spawnEnemy(state.width * 0.2 + (i * 120), -50 - (i * 80), 'sine');
+    }
+}
+
+function spawnFormationSlant() {
+    let startX = Math.random() > 0.5 ? -50 : state.width + 50;
+    let dir = startX < 0 ? 1 : -1; 
+    for (let i = 0; i < 4; i++) {
+        spawnEnemy(startX - (i * 60 * dir), -50 - (i * 60), 'diagonal', dir);
+    }
+}
+
+function spawnEnemy(x, y, moveType, dir = 1) {
+    const e = document.createElement("div");
+    e.className = "enemy";
+    e.innerHTML = '<img src="img/eShipSkin.png">';
+    document.getElementById("gameboard").appendChild(e);
+    
+    state.enemies.push({ 
+        type: 'normal', x: x, y: y, startX: x, 
+        hp: 3 + state.level, el: e, 
+        moveType: moveType, dir: dir, age: 0,
+        hasShot: false
+    });
+}
+
 function spawnBoss(lvl) {
     state.bossActive = true;
     showBossWarning();
-    
-    if (lvl <= 5) {
-        playBGM(lvl); 
-    }
+    if (lvl <= 5) playBGM(lvl); 
 
     const bossHP = 2000 + (lvl * 1500); 
     const gb = document.getElementById("gameboard");
     const e = document.createElement("div");
     e.className = "enemy boss"; 
-    
     e.innerHTML = `<img src="img/boss${lvl}.png" onerror="this.src='img/eShipSkin.png'"><div class="boss-hp-bar" style="width:100%"></div>`;
-    
     e.style.left = (state.width / 2) + "px";
     e.style.top = "-300px";
     gb.appendChild(e);
 
-    state.bossObj = {
-        type: 'boss', bossLevel: lvl, 
+    state.bossObj = { 
+        type: 'boss', 
+        bossLevel: lvl, 
         x: state.width / 2, 
         y: -300, 
-        hp: bossHP, maxHp: bossHP, el: e
+        hp: bossHP, 
+        maxHp: bossHP, 
+        el: e,
+        isEntering: true,       
+        entranceTimer: 180      
     };
     state.enemies.push(state.bossObj);
 }
@@ -254,112 +313,288 @@ function updateBossBehavior() {
     if(!state.bossObj) return;
     const boss = state.bossObj;
     
+    if (boss.isEntering) {
+        boss.entranceTimer--;
+        let targetEntryY = state.height * 0.2;
+        boss.y += (targetEntryY - boss.y) * 0.02;
+        
+        if(boss.el) {
+            boss.el.style.left = boss.x + "px"; 
+            boss.el.style.top = boss.y + "px";
+            if (Math.floor(boss.entranceTimer / 10) % 2 === 0) {
+                boss.el.style.opacity = "0.5";
+            } else {
+                boss.el.style.opacity = "1.0";
+            }
+        }
+
+        if (boss.entranceTimer <= 0) {
+            boss.isEntering = false;
+            if(boss.el) boss.el.style.opacity = "1.0"; 
+        }
+        return; 
+    }
+
     let centerX = state.width / 2;
     boss.x += (centerX - boss.x) * 0.05; 
     
     let targetY = state.height * 0.2;
-    if (boss.y < targetY) { 
-        boss.y += 2; 
-    }
+    if (boss.y < targetY) boss.y += 2; 
     
-    let bossH = boss.el ? boss.el.offsetHeight : 200;
-    let noseY = boss.y + (bossH * 0.25); 
+    // TITIK SPAWN (DEEP CENTER)
+    let noseY = boss.y; 
 
     let fireFreq = Math.max(90, 150 - (boss.bossLevel * 10)); 
     
     if (state.frames % fireFreq === 0) {
         let dice = Math.random();
-        let folder = `img/boss${boss.bossLevel}_bul/`;
-        let slowSpeed = 2; 
+        let slowSpeed = 3; 
 
-        // BOSS 1
-        if (boss.bossLevel === 1) {
-            shootWingSpread(boss, folder + "1.png", slowSpeed, 1, 1.0); 
+        const getBossBulletType = (level) => {
+            let max = 2; // Boss 1
+            if (level === 2) max = 4;
+            if (level === 3) max = 6;
+            if (level === 4) max = 8;
+            if (level === 5) max = 10;
+            let num = Math.floor(Math.random() * max) + 1;
+            return 'bul' + num;
+        };
+
+        let selectedBullet = getBossBulletType(boss.bossLevel);
+        
+        let isLaserShot = (selectedBullet === 'bul7' || selectedBullet === 'bul10');
+        let isMissileShot = (selectedBullet === 'bul3' || selectedBullet === 'bul9');
+
+        if(isLaserShot) {
+             spawnBossBullet(boss.x, noseY, 0, 0, selectedBullet, 300, 40, true); 
+        } 
+        else if (isMissileShot) {
+             spawnBossBullet(boss.x - 20, noseY, -1, 3, selectedBullet);
+             spawnBossBullet(boss.x + 20, noseY, 1, 3, selectedBullet);
         }
-        // BOSS 2
-        else if (boss.bossLevel === 2) {
-            if (dice < 0.5) shootWingSpread(boss, folder + "1.png", slowSpeed, 1, 1.0);
-            else {
-                let randX = boss.x + (Math.random() - 0.5) * 100;
-                spawnEnemyBullet(randX, noseY, 0, slowSpeed, folder + "2.png");
-            }
-        }
-        // BOSS 3
-        else if (boss.bossLevel === 3) {
-            if (dice < 0.6) shootWingSpread(boss, folder + "1.png", slowSpeed, 1, 0.8);
-            else {
-                spawnEnemyBullet(boss.x - 80, noseY, -0.5, slowSpeed, folder + "2.png"); // Menggunakan 2.png
-                spawnEnemyBullet(boss.x + 80, noseY, 0.5, slowSpeed, folder + "2.png");  // Menggunakan 2.png
-            }
-        }
-        // BOSS 4
-        else if (boss.bossLevel === 4) {
-            if (dice < 0.7) {
-                let types = ["1.png", "2.png", "3.png", "4.png", "6.png"];
-                let type = types[Math.floor(Math.random() * types.length)];
-                
-                if(type === "1.png") {
-                    shootWingSpread(boss, folder + type, slowSpeed, 1, 1.5);
-                } else {
-                    spawnEnemyBullet(boss.x, noseY, (Math.random()-0.5), slowSpeed, folder + type);
-                }
+        else {
+             if (dice < 0.6) {
+                shootCenterBurst(boss, selectedBullet, slowSpeed, 5, 1.5);
             } else {
-                shootLaserCharge(boss.x, noseY, folder + "5.png", 3, 180, 40);
-            }
-        }
-        // BOSS 5
-        else if (boss.bossLevel === 5) {
-             if (dice < 0.75) { 
-                let types = ["1.png", "2.png", "3.png", "5.png", "6.png", "8.png", "9.png", "10.png"];
-                let type = types[Math.floor(Math.random() * types.length)];
-                
-                if(type === "1.png") {
-                    shootWingSpread(boss, folder + type, slowSpeed, 1, 2.0);
-                } else {
-                    spawnEnemyBullet(boss.x - 100, noseY, -0.5, slowSpeed, folder + type);
-                    spawnEnemyBullet(boss.x + 100, noseY, 0.5, slowSpeed, folder + type);
-                }
-            } else if (dice < 0.9) {
-                shootLaserCharge(boss.x, noseY, folder + "4.png", 3, 100, 40);
-            } else {
-                shootLaserCharge(boss.x, noseY, folder + "7.png", 3, 180, 80);
+                // Tembak Lurus (Single Stream dari TENGAH ABSOLUT)
+                // Hapus offset -15/+15 agar benar-benar dari tengah
+                spawnBossBullet(boss.x, noseY, 0, slowSpeed, selectedBullet);
             }
         }
     }
 }
 
-// --- FUNGSI SHOOT HELPER ---
-
-function shootWingSpread(boss, img, speed, countPerWing, spreadFactor) {
-    let bossW = boss.el ? boss.el.offsetWidth : 200;
-    let bossH = boss.el ? boss.el.offsetHeight : 200;
-    let wingOffset = bossW * 0.25; 
-    let shootY = boss.y + (bossH * 0.25); 
-
-    shootSpread(boss.x, shootY, img, speed, countPerWing, spreadFactor);
-    shootSpread(boss.x - wingOffset, shootY, img, speed, countPerWing, spreadFactor);
-    shootSpread(boss.x + wingOffset, shootY, img, speed, countPerWing, spreadFactor);
-}
-
-function shootSpread(startX, startY, img, speed, count, spreadFactor) {
-    if (count === 1) {
-        let drift = (Math.random() - 0.5) * 0.5; 
-        spawnEnemyBullet(startX, startY, drift, speed, img);
-        return;
-    }
-    
-    let startVx = -spreadFactor; 
-    let step = (spreadFactor * 2) / (count - 1);
+function shootCenterBurst(boss, folderName, speed, count, spreadFactor) {
+    let startVx = -((count - 1) * spreadFactor) / 2; 
     for (let i = 0; i < count; i++) {
-        let vx = startVx + (step * i);
-        spawnEnemyBullet(startX, startY, vx, speed, img);
+        let vx = startVx + (i * spreadFactor);
+        spawnBossBullet(boss.x, boss.y, vx, speed, folderName);
     }
 }
 
-function shootLaserCharge(x, y, img, speed, chargeDuration, damage) {
-    spawnEnemyBullet(x, y, 0, speed, img, chargeDuration, damage);
+// --- SPAWN PELURU BOSS ---
+function spawnBossBullet(x, y, vx, vy, folderName, chargeTime = 0, damage = 10, isLaserAttack = false) {
+    const b = document.createElement("div");
+    b.className = "enemy-bullet";
+    
+    // Ambil config dari BULLET_DATA
+    let conf = BULLET_DATA[folderName] || { f: 4, w: 30, h: 30 }; 
+    
+    let finalW = conf.w;
+    let finalH = conf.h;
+    
+    // Gunakan konfigurasi Hitbox jika ada, jika tidak pakai ukuran visual
+    let hitW = conf.hitW || finalW;
+    let hitH = conf.hitH || finalH;
+    
+    let finalY = y; 
+
+    if (isLaserAttack) {
+        finalW = 40;
+        finalH = 800; 
+        hitH = 800; // Hitbox Laser Panjang
+        b.classList.add("laser-beam");
+        finalY = y + (finalH / 2);
+    }
+
+    b.style.width = finalW + "px";
+    b.style.height = finalH + "px";
+    b.style.left = x + "px";
+    b.style.top = finalY + "px";
+    
+    if (chargeTime > 0) b.classList.add("laser-charge");
+
+    let initialSrc = `img/${folderName}/tile000.png`;
+    b.innerHTML = `<img src="${initialSrc}" style="width:100%;height:100%;object-fit:${isLaserAttack ? 'fill' : 'contain'};">`;
+    
+    document.getElementById("gameboard").appendChild(b);
+
+    state.enemyBullets.push({
+        x: x, y: finalY,
+        vx: vx, vy: vy, el: b,
+        chargeTimer: chargeTime, 
+        life: 600,
+        isAnim: true,
+        folder: folderName,
+        totalFrames: conf.f,
+        currentFrame: 0,
+        frameTimer: 0,
+        isLaser: isLaserAttack,
+        isMissile: (conf.isMissile === true),
+        homingTimer: 90, 
+        
+        // Simpan Data Hitbox
+        w: finalW, // Visual Width
+        h: finalH, // Visual Height
+        hitW: hitW, // Collision Width (Lebih Kecil)
+        hitH: hitH  // Collision Height
+    });
 }
 
+// --- SPAWN PELURU BIASA ---
+function spawnEnemyBullet(x, y, vx, vy, imgPath) {
+    const b = document.createElement("div");
+    b.className = "enemy-bullet";
+    b.style.width = "15px";
+    b.style.height = "30px";
+    b.style.left = x + "px";
+    b.style.top = y + "px";
+    
+    b.innerHTML = `<img src="${imgPath}" style="width:100%;height:100%;object-fit:contain;">`;
+    document.getElementById("gameboard").appendChild(b);
+    
+    state.enemyBullets.push({ 
+        x: x, y: y, vx: vx, vy: vy, el: b, 
+        life: 600, isAnim: false, w: 15, h: 30, hitW: 10, hitH: 20
+    });
+}
+
+// --- UPDATE MUSUH ---
+function updateEnemies() {
+    for (let i = state.enemies.length - 1; i >= 0; i--) {
+        let e = state.enemies[i];
+        
+        if (e.type === 'normal') {
+            e.age++;
+            e.y += CONFIG.baseEnemySpeed + (state.level * 0.3);
+            if (e.moveType === 'sine') e.x = e.startX + Math.sin(e.age * 0.05) * 100;
+            if (e.moveType === 'diagonal') e.x += 2 * e.dir;
+
+            if (!e.hasShot && e.y > 50 && Math.random() < 0.02) {
+                let dx = state.player.x - e.x;
+                let dy = state.player.y - e.y;
+                let angle = Math.atan2(dy, dx);
+                let speed = CONFIG.enemyBulletSpeed;
+                let bvx = Math.cos(angle) * speed;
+                let bvy = Math.sin(angle) * speed;
+                
+                spawnEnemyBullet(e.x, e.y + 30, bvx, bvy, 'img/bullet.png');
+                e.hasShot = true; 
+            }
+
+        } else if (e.type === 'boss') {
+            if(e.el) {
+                e.el.style.left = e.x + "px"; e.el.style.top = e.y + "px";
+                const hpBar = e.el.querySelector('.boss-hp-bar');
+                if(hpBar) hpBar.style.width = (e.hp / e.maxHp * 100) + "%";
+            }
+        }
+        
+        if(e.el) { e.el.style.top = e.y + "px"; e.el.style.left = e.x + "px"; }
+
+        let hitW = 50, hitH = 50;
+        if(e.type === 'boss' && e.el) { hitW = e.el.offsetWidth * 0.4; hitH = e.el.offsetHeight * 0.4; }
+
+        if (e.type !== 'boss' && e.y > state.height + 50) {
+            removeObj(e.el); state.enemies.splice(i, 1);
+            continue;
+        }
+        
+        // HITBOX PLAYER 20px
+        if (isColliding(state.player.x, state.player.y, 20, 20, e.x, e.y, hitW, hitH)) {
+            if(e.type !== 'boss') { 
+                removeObj(e.el); state.enemies.splice(i, 1); 
+                damagePlayer(30); 
+                createExplosion(e.x, e.y);
+            } else {
+                if (!e.isEntering) {
+                    damagePlayer(30); 
+                    createExplosion(e.x, e.y);
+                }
+            }
+        }
+    }
+}
+
+// --- UPDATE PELURU MUSUH ---
+function updateEnemyBullets() {
+    for (let i = state.enemyBullets.length - 1; i >= 0; i--) {
+        let b = state.enemyBullets[i];
+        b.life--;
+
+        if (b.isAnim) {
+            b.frameTimer++;
+            if (b.frameTimer > 3) {
+                b.currentFrame = (b.currentFrame + 1) % b.totalFrames;
+                let num = pad(b.currentFrame, 3);
+                let newSrc = `img/${b.folder}/tile${num}.png`;
+                let imgEl = b.el.querySelector('img');
+                if(imgEl) imgEl.src = newSrc;
+                b.frameTimer = 0;
+            }
+        }
+
+        if (b.chargeTimer && b.chargeTimer > 0) {
+            b.chargeTimer--;
+            if (b.chargeTimer <= 0) {
+                b.el.classList.remove("laser-charge");
+            }
+            continue; 
+        }
+
+        if (b.isMissile && b.homingTimer > 0) {
+            b.homingTimer--;
+            let dx = state.player.x - b.x;
+            let dy = state.player.y - b.y;
+            let targetAngle = Math.atan2(dy, dx);
+            let speed = 4; 
+            b.vx += Math.cos(targetAngle) * 0.5; 
+            b.vy += Math.sin(targetAngle) * 0.5;
+            let currentSpeed = Math.sqrt(b.vx*b.vx + b.vy*b.vy);
+            if(currentSpeed > speed) {
+                b.vx = (b.vx / currentSpeed) * speed;
+                b.vy = (b.vy / currentSpeed) * speed;
+            }
+        }
+
+        b.x += b.vx; 
+        b.y += b.vy;
+        
+        if (b.vx !== 0 && !b.isLaser) {
+             let deg = Math.atan2(b.vy, b.vx) * 180 / Math.PI;
+             b.el.style.transform = `translate(-50%, -50%) rotate(${deg - 90}deg)`;
+        } else {
+             b.el.style.transform = `translate(-50%, -50%)`;
+        }
+
+        if (b.y > state.height + 100 || b.x < -50 || b.x > state.width + 50 || b.life <= 0) { 
+            removeObj(b.el); state.enemyBullets.splice(i, 1); 
+        } else {
+            b.el.style.top = b.y + "px"; b.el.style.left = b.x + "px";
+            
+            // HITBOX Logic: Gunakan b.hitW jika ada (Prioritas), jika tidak pakai b.w
+            let currentHitW = b.hitW || b.w;
+            let currentHitH = b.hitH || b.h;
+
+            if (isColliding(b.x, b.y, currentHitW, currentHitH, state.player.x, state.player.y, 20, 20)) {
+                damagePlayer(10); 
+                if(!b.isLaser) { removeObj(b.el); state.enemyBullets.splice(i, 1); }
+            }
+        }
+    }
+}
+
+// --- PLAYER & CORE LOOP ---
 function updatePlayerMovement() {
     const p = state.player;
     p.x += (state.mouseX - p.x) * CONFIG.playerSpeed;
@@ -371,9 +606,8 @@ function updatePlayerMovement() {
 
 function firePlayerBullet() {
     if(audioShoot) {
-        // --- FIX VOLUME UTAMA: FORCE SET VOLUME PADA CLONE ---
         const sfx = audioShoot.cloneNode(true);
-        sfx.volume = VOL_SFX; // Paksa volume 10%
+        sfx.volume = VOL_SFX; 
         sfx.play().catch(()=>{});
     }
     const b = document.createElement("div");
@@ -398,175 +632,6 @@ function damagePlayer(amount) {
     }
 }
 
-function spawnNormalEnemy() {
-    const xPos = Math.random() * (state.width - 60) + 30; 
-    const e = document.createElement("div");
-    e.className = "enemy";
-    e.innerHTML = '<img src="img/eShipSkin.png">';
-    document.getElementById("gameboard").appendChild(e);
-    state.enemies.push({ type: 'normal', x: xPos, y: -50, hp: 3 + state.level, el: e });
-}
-
-function spawnEnemyBullet(x, y, vx, vy, imgPath, chargeTime = 0, damage = 10) {
-    const b = document.createElement("div");
-    b.className = "enemy-bullet";
-    
-    let w = 25, h = 25; 
-    let isLaser = false;
-    let curveRate = 0; 
-    let vanishY = state.height * (0.5 + Math.random() * 0.5);
-
-    if (imgPath) {
-        if (imgPath.includes("boss5_bul/7.png") || imgPath.includes("boss5_bul/4.png") || imgPath.includes("boss4_bul/5.png")) {
-            w = 50; h = 700; 
-            b.classList.add("laser-beam");
-            isLaser = true;
-            vanishY = state.height + 800; 
-        }
-        else if (
-            (imgPath.includes("2.png") || 
-             imgPath.includes("3.png") ||  
-             imgPath.includes("4.png") || 
-             imgPath.includes("5.png") || 
-             imgPath.includes("6.png") || 
-             imgPath.includes("8.png") || 
-             imgPath.includes("9.png") || 
-             imgPath.includes("10.png")) 
-            && imgPath.includes("boss")
-        ) {
-            w = 280; h = 60; 
-        }
-        else if (imgPath.includes("1.png")) {
-            w = 60; h = 60; 
-        }
-        else if (imgPath.includes("boss")) {
-            w = 80; h = 80; 
-        }
-    }
-    
-    if (!isLaser) {
-        if (Math.random() < 0.5) { 
-            curveRate = (Math.random() - 0.5) * 0.02; 
-        }
-        vx += (Math.random() - 0.5) * 0.5; 
-    }
-
-    b.style.width = w + "px";
-    b.style.height = h + "px";
-    
-    let finalY = y;
-    if (isLaser) {
-        finalY = y + (h / 2) - 20; 
-    }
-
-    b.style.left = x + "px";
-    b.style.top = finalY + "px";
-    
-    let charging = false;
-    if (chargeTime > 0 && isLaser) {
-        b.classList.add("laser-charge");
-        charging = true;
-    }
-
-    let finalSrc = imgPath ? imgPath : 'img/enemyBullet.png';
-    b.innerHTML = `<img src="${finalSrc}" onerror="this.src='img/bullet.png'">`;
-    document.getElementById("gameboard").appendChild(b);
-    
-    state.enemyBullets.push({ 
-        x: x, y: finalY, 
-        vx: vx, vy: vy, el: b, 
-        chargeTimer: chargeTime, dmg: damage, w: w, h: h,
-        isCharging: charging,
-        curveRate: curveRate,
-        speedVal: Math.sqrt(vx*vx + vy*vy) || 3,
-        life: 600,
-        vanishY: vanishY 
-    });
-}
-
-function updateEnemies() {
-    for (let i = state.enemies.length - 1; i >= 0; i--) {
-        let e = state.enemies[i];
-        
-        if (e.type === 'normal') {
-            e.y += CONFIG.baseEnemySpeed + (state.level * 0.3);
-            if (Math.random() < 0.01) {
-                spawnEnemyBullet(e.x, e.y + 30, 0, CONFIG.enemyBulletSpeed, 'img/enemyBullet.png');
-            }
-        } else if (e.type === 'boss') {
-            if(e.el) {
-                e.el.style.left = e.x + "px"; e.el.style.top = e.y + "px";
-                const hpBar = e.el.querySelector('.boss-hp-bar');
-                if(hpBar) hpBar.style.width = (e.hp / e.maxHp * 100) + "%";
-            }
-        }
-
-        if(e.el) { e.el.style.top = e.y + "px"; e.el.style.left = e.x + "px"; }
-
-        let hitW = 50, hitH = 50;
-        if(e.type === 'boss' && e.el) {
-            hitW = e.el.offsetWidth * 0.4;
-            hitH = e.el.offsetHeight * 0.4;
-        }
-
-        if (e.type !== 'boss' && e.y > state.height + 50) {
-            removeObj(e.el); state.enemies.splice(i, 1);
-            continue;
-        }
-
-        if (isColliding(state.player.x, state.player.y, 20, 30, e.x, e.y, hitW, hitH)) {
-            if(e.type !== 'boss') { 
-                removeObj(e.el); 
-                state.enemies.splice(i, 1); 
-            }
-            damagePlayer(30); 
-            createExplosion(e.x, e.y);
-        }
-    }
-}
-
-function updateEnemyBullets() {
-    for (let i = state.enemyBullets.length - 1; i >= 0; i--) {
-        let b = state.enemyBullets[i];
-        
-        b.life--;
-
-        if (b.isCharging) {
-            b.chargeTimer--;
-            if (b.chargeTimer <= 0) {
-                b.isCharging = false;
-                b.el.classList.remove("laser-charge");
-            }
-            continue; 
-        }
-
-        if (b.curveRate !== 0) {
-            let currentAngle = Math.atan2(b.vy, b.vx);
-            currentAngle += b.curveRate; 
-            b.vx = Math.cos(currentAngle) * b.speedVal;
-            b.vy = Math.sin(currentAngle) * b.speedVal;
-            let deg = Math.atan2(b.vy, b.vx) * 180 / Math.PI;
-            b.el.style.transform = `translate(-50%, -50%) rotate(${deg + 90}deg)`;
-        }
-
-        b.x += b.vx;
-        b.y += b.vy;
-
-        let shouldVanish = (!b.el.classList.contains("laser-beam") && b.y > b.vanishY);
-
-        if (shouldVanish || b.y > state.height + 100 || b.x < -50 || b.x > state.width + 50 || b.life <= 0) { 
-            removeObj(b.el); state.enemyBullets.splice(i, 1); 
-        } 
-        else {
-            b.el.style.top = b.y + "px"; b.el.style.left = b.x + "px";
-            if (isColliding(b.x, b.y, b.w * 0.4, b.h * 0.4, state.player.x, state.player.y, 15, 15)) {
-                damagePlayer(b.dmg || 10);
-                removeObj(b.el); state.enemyBullets.splice(i, 1);
-            }
-        }
-    }
-}
-
 function updateBullets() {
     for (let i = state.bullets.length - 1; i >= 0; i--) {
         let b = state.bullets[i];
@@ -576,18 +641,17 @@ function updateBullets() {
             b.el.style.top = b.y + "px"; b.el.style.left = b.x + "px";
             for (let j = state.enemies.length - 1; j >= 0; j--) {
                 let e = state.enemies[j];
-                
                 let hitW = 50, hitH = 50;
-                if (e.type === 'boss' && e.el) {
-                    hitW = e.el.offsetWidth * 0.4; 
-                    hitH = e.el.offsetHeight * 0.4;
-                }
+                if (e.type === 'boss' && e.el) { hitW = e.el.offsetWidth * 0.4; hitH = e.el.offsetHeight * 0.4; }
                 
                 if (isColliding(b.x, b.y, 10, 20, e.x, e.y, hitW, hitH)) {
-                    removeObj(b.el); 
-                    state.bullets.splice(i, 1);
-                    
+                    removeObj(b.el); state.bullets.splice(i, 1);
                     createExplosion(b.x, b.y - 10); 
+                    
+                    if (e.type === 'boss' && e.isEntering) {
+                        break;
+                    }
+
                     e.hp -= 20;
                     if (e.hp <= 0) {
                         if (e.type === 'boss') {
@@ -596,8 +660,7 @@ function updateBullets() {
                             playBGM(0);
                             state.player.hp = Math.min(state.player.maxHp, state.player.hp + 50); damagePlayer(0);
                         } else {
-                            createExplosion(e.x, e.y);
-                            state.score += CONFIG.pointsNormal;
+                            createExplosion(e.x, e.y); state.score += CONFIG.pointsNormal;
                         }
                         removeObj(e.el); state.enemies.splice(j, 1);
                     }
@@ -614,36 +677,24 @@ function isColliding(x1, y1, w1, h1, x2, y2, w2, h2) {
 
 function createExplosion(x, y) {
     if(audioExplode) {
-        // --- FIX VOLUME LEDAKAN ---
         const sfx = audioExplode.cloneNode(true);
-        sfx.volume = VOL_SFX; // Paksa volume 10%
+        sfx.volume = VOL_SFX;
         sfx.play().catch(()=>{});
     }
-    
     const gb = document.getElementById("gameboard");
     if(!gb) return;
-
     const exp = document.createElement("div");
     exp.className = "explosion";
     exp.style.left = x + "px"; exp.style.top = y + "px";
-    
     const img = document.createElement("img");
     img.onerror = function() { this.style.display='none'; };
     img.src = "img/explosion/1.png"; 
-    exp.appendChild(img);
-    gb.appendChild(exp);
-
+    exp.appendChild(img); gb.appendChild(exp);
     let frame = 1;
-    const maxFrames = 8; 
-
     const interval = setInterval(() => {
         frame++;
-        if (frame > maxFrames) {
-            clearInterval(interval);
-            removeObj(exp);
-        } else {
-            img.src = `img/explosion/${frame}.png`;
-        }
+        if (frame > 8) { clearInterval(interval); removeObj(exp); } 
+        else { img.src = `img/explosion/${frame}.png`; }
     }, 40); 
 }
 
@@ -674,19 +725,16 @@ function updateUI() {
     if(sEl) sEl.innerText = state.score;
     if(lEl) lEl.innerText = state.level;
 }
-
-function removeObj(el) { 
-    if (el && el.parentNode) el.parentNode.removeChild(el); 
-}
-
+function removeObj(el) { if (el && el.parentNode) el.parentNode.removeChild(el); }
 function gameOver() {
     state.isGameOver = true;
-    bgmPlayer.pause();
+    if(bgmPlayer) bgmPlayer.pause();
     document.getElementById("finalScore").innerText = state.score;
     document.getElementById("game-over-screen").classList.remove("hidden");
     document.getElementById("gameboard").style.cursor = "default";
 }
 
+// --- FUNGSI DEV MODE ---
 function toggleDevPanel() {
     state.devPanelOpen = !state.devPanelOpen;
     const panel = document.getElementById("dev-panel");
