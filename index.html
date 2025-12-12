@@ -4,7 +4,15 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Space War - Responsive & SlowMo</title>
+
+    <title>Space War - Never Ending Battle</title>
+
+    <meta property="og:title" content="Space War: Never Ending Battle">
+    <meta property="og:description"
+        content="Ayo mainkan game buatan saya! Hindari ribuan peluru dan kalahkan. Bisa dimainkan di browser HP & PC!">
+    <meta property="og:url" content="https://davidwel89.github.io/spacewar/">
+    <meta property="og:type" content="website">
+
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -13,9 +21,9 @@
     <div id="gameboard">
         <div id="start-screen">
             <h1>SPACE WAR</h1>
-            <p>Misi: Gocek Peluru & Hancurkan Boss!</p>
+            <p>Misi: Gocek Peluru & Bunuh Boss!</p>
             <p class="desktop-hint">(Gerakkan Mouse untuk Mengontrol)</p>
-            <p class="mobile-hint">(Geser Jari untuk Mengontrol)</p>
+            <p class="mobile-hint">(Tekan dan geser pesawat untuk Mengontrol)</p>
             <button onclick="startGame()">START MISSION</button>
         </div>
 
@@ -35,6 +43,7 @@
             <div id="boss-warning" class="hidden">WARNING: GIANT BOSS!</div>
         </div>
 
+        <!-- 
         <div id="dev-panel" class="hidden">
             <h3>🛠️ DEV MODE</h3>
             <div class="dev-controls">
@@ -45,7 +54,7 @@
                 <button onclick="devForceBoss()">Spawn Boss</button>
             </div>
             <small>Tekan ( ` ) tutup</small>
-        </div>
+        </div> -->
 
         <div id="game-over-screen" class="hidden">
             <h1>MISSION FAILED</h1>

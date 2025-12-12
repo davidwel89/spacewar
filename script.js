@@ -51,9 +51,9 @@ window.onload = function () {
         if(state.player.y > state.height) state.player.y = state.height - 20;
     });
 
-    // document.addEventListener("keydown", (e) => {
-    //     if (e.key === "`" || e.key === "~") toggleDevPanel();
-    // });
+    /* document.addEventListener("keydown", (e) => {
+         if (e.key === "`" || e.key === "~") toggleDevPanel();
+     }); */
 };
 
 function startGame() {
